@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>SnakeGame Tests</title>
+  <style>
+    body { font-family: monospace; background: #0a1628; color: #ccc; padding: 24px; }
+    h1 { color: #63b3ed; margin-bottom: 16px; letter-spacing: 2px; }
+    .pass { color: #4ade80; }
+    .fail { color: #f87171; font-weight: bold; }
+    .suite { margin: 16px 0 4px; color: #93c5fd; font-weight: bold; }
+    #summary { margin-top: 20px; font-size: 14px; border-top: 1px solid #1e3a5f; padding-top: 12px; }
+  </style>
+</head>
+<body>
+<h1>SNAKE — UNIT TESTS</h1>
+<div id="output"></div>
+<div id="summary"></div>
+
+<script src="../game.js"></script>
+<script>
+  const out = document.getElementById('output');
+  let passed = 0, failed = 0;
+
+  function assert(condition, msg) {
+    const el = document.createElement('div');
+    el.className = condition ? 'pass' : 'fail';
+    el.textContent = (condition ? '  ✓ ' : '  ✗ ') + msg;
+    out.appendChild(el);
+    condition ? passed++ : failed++;
+  }
+
+  function suite(name) {
+    const el = document.createElement('div');
+    el.className = 'suite';
+    el.textContent = name;
+    out.appendChild(el);
+  }
+
+  function mockCanvas() {
+    const noop = () => mockCtx;
+    const mockCtx = new Proxy({}, {
+      get(_, p) {
+        if (p === 'createLinearGradient' || p === 'createRadialGradient')
+          return () => ({ addColorStop: () => {} });
+        return noop;
+      },
+      set() { return true; }
+    });
+    return { width: 400, height: 400, getContext: () => mockCtx };
+  }
+
+  function makeGame(mode) {
+    return new SnakeGame(mockCanvas(), mode || 'classic');
+  }
+
+  // ── Initial state ─────────────────────────────────────────────────────
+  suite('Initial state');
+  (() => {
+    const g = makeGame();
+    assert(g.snake.length === 3, 'snake starts with 3 segments');
+    assert(g.snake[0].x === 10 && g.snake[0].y === 10, 'head starts at (10,10)');
+    assert(g.direction.x === 1 && g.direction.y === 0, 'initial direction is right');
+    assert(g.score === 0, 'score starts at 0');
+    assert(g.state === 'idle', 'state starts as idle');
+    assert(g.food !== null, 'food is spawned on reset');
+  })();
+
+  // ── Direction queuing ─────────────────────────────────────────────────
+  suite('Direction queuing');
+  (() => {
+    const g = makeGame();
+    g.queueDirection(0, 1);
+    assert(g.nextDirection.x === 0 && g.nextDirection.y === 1, 'queues valid direction');
+
+    g.direction = { x: 1, y: 0 };
+    g.queueDirection(-1, 0); // 180° reversal — should be ignored
+    assert(g.nextDirection.x !== -1, 'ignores 180° reversal');
+  })();
+
+  // ── Wall collision ────────────────────────────────────────────────────
+  suite('Wall collision');
+  (() => {
+    const g = makeGame();
+    g.state = 'running';
+    g.snake = [{ x: 0, y: 5 }];
+    g.direction = { x: -1, y: 0 };
+    g.nextDirection = { x: -1, y: 0 };
+    g.food = { x: 15, y: 15 };
+    g._tick();
+    assert(g.state === 'dead', 'left wall causes death');
+
+    const g2 = makeGame();
+    g2.state = 'running';
+    g2.snake = [{ x: 19, y: 5 }];
+    g2.direction = { x: 1, y: 0 };
+    g2.nextDirection = { x: 1, y: 0 };
+    g2.food = { x: 15, y: 15 };
+    g2._tick();
+    assert(g2.state === 'dead', 'right wall causes death');
+
+    const g3 = makeGame();
+    g3.state = 'running';
+    g3.snake = [{ x: 5, y: 0 }];
+    g3.direction = { x: 0, y: -1 };
+    g3.nextDirection = { x: 0, y: -1 };
+    g3.food = { x: 15, y: 15 };
+    g3._tick();
+    assert(g3.state === 'dead', 'top wall causes death');
+  })();
+
+  // ── Self collision ────────────────────────────────────────────────────
+  suite('Self collision');
+  (() => {
+    const g = makeGame();
+    g.state = 'running';
+    // Head at (5,5), body at (5,6). Moving down walks into body.
+    g.snake = [{ x: 5, y: 5 }, { x: 5, y: 6 }];
+    g.direction = { x: 0, y: 1 };
+    g.nextDirection = { x: 0, y: 1 };
+    g.food = { x: 15, y: 15 };
+    g._tick();
+    assert(g.state === 'dead', 'self collision causes death');
+  })();
+
+  // ── Food eating ───────────────────────────────────────────────────────
+  suite('Food eating');
+  (() => {
+    const g = makeGame();
+    g.state = 'running';
+    g.snake = [{ x: 5, y: 5 }, { x: 4, y: 5 }];
+    g.direction = { x: 1, y: 0 };
+    g.nextDirection = { x: 1, y: 0 };
+    g.food = { x: 6, y: 5 };
+    const prevLen = g.snake.length;
+    g._tick();
+    assert(g.score === 10, 'score increases by 10 on food');
+    assert(g.snake.length === prevLen + 1, 'snake grows on food');
+    assert(g.foodEaten === 1, 'foodEaten counter increments');
+    assert(!(g.food.x === 6 && g.food.y === 5), 'food respawns after eaten');
+  })();
+
+  // ── Shield absorbs collision ──────────────────────────────────────────
+  suite('Shield power-up');
+  (() => {
+    const g = makeGame('extreme');
+    g.state = 'running';
+    g.snake = [{ x: 0, y: 5 }];
+    g.direction = { x: -1, y: 0 };
+    g.nextDirection = { x: -1, y: 0 };
+    g.food = { x: 15, y: 15 };
+    g.activeEffects.shield = true;
+    g._tick();
+    assert(g.state !== 'dead', 'shield absorbs wall collision');
+    assert(!g.activeEffects.shield, 'shield is consumed after use');
+
+    const g2 = makeGame('extreme');
+    g2.state = 'running';
+    g2.snake = [{ x: 5, y: 5 }, { x: 5, y: 6 }];
+    g2.direction = { x: 0, y: 1 };
+    g2.nextDirection = { x: 0, y: 1 };
+    g2.food = { x: 15, y: 15 };
+    g2.activeEffects.shield = true;
+    g2._tick();
+    assert(g2.state !== 'dead', 'shield absorbs self collision');
+  })();
+
+  // ── Power-up collection ───────────────────────────────────────────────
+  suite('Power-up collection');
+  (() => {
+    const g = makeGame('extreme');
+    g.state = 'running';
+    g.snake = [{ x: 5, y: 5 }];
+    g.direction = { x: 1, y: 0 };
+    g.nextDirection = { x: 1, y: 0 };
+    g.food = { x: 15, y: 15 };
+    g.powerUps = [{ x: 6, y: 5, type: 'shield', expiresAt: Date.now() + 5000 }];
+    g._tick();
+    assert(g.activeEffects.shield === true, 'shield power-up collected and applied');
+    assert(g.powerUps.length === 0, 'power-up removed after collection');
+
+    const g2 = makeGame('extreme');
+    g2.state = 'running';
+    g2.snake = [{ x: 5, y: 5 }, { x: 4, y: 5 }];
+    g2.direction = { x: 1, y: 0 };
+    g2.nextDirection = { x: 1, y: 0 };
+    g2.food = { x: 6, y: 5 };
+    g2.activeEffects.doublescore = Date.now() + 5000;
+    g2._tick();
+    assert(g2.score === 20, 'double-score effect doubles food points');
+  })();
+
+  const summary = document.getElementById('summary');
+  summary.textContent = `${passed + failed} tests — ${passed} passed, ${failed} failed`;
+  summary.style.color = failed === 0 ? '#4ade80' : '#f87171';
+</script>
+</body>
+</html>
