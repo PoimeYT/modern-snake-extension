@@ -9,7 +9,16 @@
 
   const params = new URLSearchParams(location.search);
   const mode = params.get('mode') || 'classic';
-  hudMode.textContent = mode.toUpperCase();
+  hudMode.textContent = mode === 'custom' ? 'CUSTOM' : mode.toUpperCase();
+
+  // For custom mode, reconstruct the config from URL params
+  const gameConfig = mode === 'custom' ? {
+    foodCount:    parseInt(params.get('foodCount')    || '1',     10),
+    baseInterval: parseInt(params.get('baseInterval') || '150',   10),
+    levels:       params.get('levels')    === 'true',
+    obstacles:    params.get('obstacles') === 'true',
+    powerUps:     params.get('powerUps')  === 'true',
+  } : {};
 
   let game = null;
   let flashInterval = null;
@@ -36,7 +45,7 @@
 
     if (flashInterval) { clearInterval(flashInterval); flashInterval = null; }
     if (game) game.stop();
-    game = new SnakeGame(canvas, mode);
+    game = new SnakeGame(canvas, mode, gameConfig);
 
     game.onScoreUpdate = function (score) {
       hudScore.textContent = score;

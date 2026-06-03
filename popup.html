@@ -20,10 +20,53 @@
     <div class="tab active" data-mode="classic">CLASSIC</div>
     <div class="tab" data-mode="classic+">CLASSIC+</div>
     <div class="tab" data-mode="extreme">EXTREME</div>
+    <div class="tab" data-mode="custom">CUSTOM</div>
   </div>
 
   <div class="canvas-wrap">
     <canvas id="game-canvas"></canvas>
+
+    <!-- Custom mode configuration panel -->
+    <div class="custom-panel" id="custom-panel">
+      <div class="custom-heading">CONFIGURE</div>
+
+      <div class="setting-row">
+        <span class="setting-label">FRUIT COUNT</span>
+        <div class="stepper">
+          <button class="stepper-btn" id="fruit-minus">−</button>
+          <span class="stepper-val" id="fruit-count">1</span>
+          <button class="stepper-btn" id="fruit-plus">+</button>
+        </div>
+      </div>
+
+      <div class="setting-row">
+        <span class="setting-label">SPEED</span>
+        <div class="speed-group" id="speed-group">
+          <button class="speed-opt" data-val="220">SLOW</button>
+          <button class="speed-opt active" data-val="150">MED</button>
+          <button class="speed-opt" data-val="90">FAST</button>
+          <button class="speed-opt" data-val="55">MAX</button>
+        </div>
+      </div>
+
+      <div class="setting-row">
+        <span class="setting-label">LEVELS</span>
+        <button class="feat-toggle" id="toggle-levels">OFF</button>
+      </div>
+
+      <div class="setting-row">
+        <span class="setting-label">OBSTACLES</span>
+        <button class="feat-toggle" id="toggle-obstacles">OFF</button>
+      </div>
+
+      <div class="setting-row">
+        <span class="setting-label">POWER-UPS</span>
+        <button class="feat-toggle" id="toggle-powerups">OFF</button>
+      </div>
+
+      <button class="btn primary custom-play-btn" id="custom-play">▶ PLAY</button>
+    </div>
+
     <div class="overlay" id="overlay">
       <div class="overlay-title">GAME OVER</div>
       <div class="overlay-score" id="overlay-score">SCORE: 0</div>

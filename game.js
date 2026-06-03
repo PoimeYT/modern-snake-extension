@@ -1,18 +1,29 @@
 class SnakeGame {
-  constructor(canvas, mode) {
+  constructor(canvas, mode, config = {}) {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d');
-    this.mode = mode; // 'classic' | 'classic+' | 'extreme'
+    this.mode = mode;
     this.GRID = 20;
     this._rafId = null;
     this._lastTick = 0;
     this._prevSnake = null;
 
-    this.onScoreUpdate = null; // fn(score)
-    this.onDeath = null;       // fn(score)
-    this.onLevelUp = null;     // fn(level)
+    this.onScoreUpdate = null;
+    this.onDeath = null;
+    this.onLevelUp = null;
 
+    this._config = this._buildConfig(mode, config); // must come before reset()
     this.reset();
+  }
+
+  _buildConfig(mode, overrides) {
+    const presets = {
+      'classic':  { foodCount: 1, baseInterval: 150, levels: false, obstacles: false, powerUps: false },
+      'classic+': { foodCount: 1, baseInterval: 150, levels: true,  obstacles: false, powerUps: false },
+      'extreme':  { foodCount: 3, baseInterval: 150, levels: true,  obstacles: true,  powerUps: true  },
+      'custom':   { foodCount: 1, baseInterval: 150, levels: false, obstacles: false, powerUps: false },
+    };
+    return { ...(presets[mode] || presets['classic']), ...overrides };
   }
 
   // Backward-compat accessors so tests and external code can still use game.food
@@ -23,22 +34,20 @@ class SnakeGame {
     this.snake = [{ x: 10, y: 10 }, { x: 9, y: 10 }, { x: 8, y: 10 }];
     this._prevSnake = this.snake.map(s => ({ ...s }));
     this.direction = { x: 1, y: 0 };
-    this._inputQueue = []; // FIFO of {x,y} — each tick consumes one entry
+    this._inputQueue = [];
     this.obstacles = [];
     this.powerUps = [];
-    this.activeEffects = {}; // { slowmo: expiryMs, shield: true, doublescore: expiryMs }
-    // Extreme gets 3 simultaneous pellets; other modes get 1
-    const foodCount = this.mode === 'extreme' ? 3 : 1;
+    this.activeEffects = {};
     this.foods = [];
-    for (let i = 0; i < foodCount; i++) {
+    for (let i = 0; i < this._config.foodCount; i++) {
       const f = this._randomFreeCell();
       if (f) this.foods.push(f);
     }
     this.score = 0;
     this.level = 1;
     this.foodEaten = 0;
-    this.tickInterval = 150;
-    this.state = 'idle'; // 'idle' | 'running' | 'paused' | 'dead'
+    this.tickInterval = this._config.baseInterval;
+    this.state = 'idle';
   }
 
   start() {
@@ -66,11 +75,9 @@ class SnakeGame {
   }
 
   queueDirection(dx, dy) {
-    // Check reversal against the last queued direction (not the committed one),
-    // so cornering (e.g. right → up → left in rapid succession) works correctly.
     const last = this._inputQueue[this._inputQueue.length - 1] || this.direction;
-    if (dx === -last.x && dy === -last.y) return; // block 180° reversal
-    if (dx === last.x && dy === last.y) return;    // skip duplicate
+    if (dx === -last.x && dy === -last.y) return;
+    if (dx === last.x && dy === last.y) return;
     if (this._inputQueue.length < 3) this._inputQueue.push({ x: dx, y: dy });
   }
 
@@ -126,7 +133,6 @@ class SnakeGame {
 
     this.snake.unshift(head);
 
-    // Multi-food collision — find which pellet was eaten (if any)
     const eatenIdx = this.foods.findIndex(f => f.x === head.x && f.y === head.y);
     if (eatenIdx !== -1) {
       const pts = (this.activeEffects.doublescore && Date.now() < this.activeEffects.doublescore) ? 20 : 10;
@@ -139,7 +145,6 @@ class SnakeGame {
       this.snake.pop();
     }
 
-    // Power-up collection + expiry
     const now = Date.now();
     this.powerUps = this.powerUps.filter(p => {
       if (p.x === head.x && p.y === head.y) { this._applyPowerUp(p.type); return false; }
@@ -150,12 +155,12 @@ class SnakeGame {
   }
 
   _onFoodEaten() {
-    if (this.mode === 'classic') return;
+    if (!this._config.levels) return;
     if (this.foodEaten % 5 !== 0) return;
     this.level++;
-    this.tickInterval = Math.max(60, 150 - (this.level - 1) * 10);
-    if (this.mode === 'extreme' && this.level >= 3) this._spawnObstacle();
-    if (this.mode === 'extreme' && Math.random() < 0.4) this._spawnPowerUp();
+    this.tickInterval = Math.max(60, this._config.baseInterval - (this.level - 1) * 10);
+    if (this._config.obstacles && this.level >= 3) this._spawnObstacle();
+    if (this._config.powerUps && Math.random() < 0.4) this._spawnPowerUp();
     if (this.onLevelUp) this.onLevelUp(this.level);
   }
 
@@ -211,7 +216,6 @@ class SnakeGame {
       localStorage.setItem(SnakeGame.bestScoreKey(mode), String(score));
   }
 
-  // progress (0-1): how far between the last tick and the next — used for smooth interpolation
   render(progress = 1) {
     const { ctx, canvas, GRID } = this;
     const cell = Math.floor(Math.min(canvas.width, canvas.height) / GRID);
@@ -225,7 +229,7 @@ class SnakeGame {
     ctx.fillStyle = bg;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Subtle grid
+    // Grid
     ctx.strokeStyle = 'rgba(255,255,255,0.03)';
     ctx.lineWidth = 0.5;
     for (let i = 0; i <= GRID; i++) {
@@ -254,14 +258,12 @@ class SnakeGame {
       ctx.globalAlpha = 1;
     });
 
-    // All food pellets (pulsing)
+    // Food pellets (pulsing)
     const now_ms = Date.now();
     const pulse = 0.85 + 0.15 * Math.sin(now_ms / 300);
     this.foods.forEach(f => {
-      const fx = ox + f.x * cell + cell / 2;
-      const fy = oy + f.y * cell + cell / 2;
       ctx.beginPath();
-      ctx.arc(fx, fy, (cell / 2 - 2) * pulse, 0, Math.PI * 2);
+      ctx.arc(ox + f.x * cell + cell / 2, oy + f.y * cell + cell / 2, (cell / 2 - 2) * pulse, 0, Math.PI * 2);
       ctx.fillStyle = 'rgba(99,179,237,0.9)';
       ctx.shadowColor = '#63b3ed';
       ctx.shadowBlur = 10;
@@ -269,13 +271,12 @@ class SnakeGame {
       ctx.shadowBlur = 0;
     });
 
-    // Snake segments — interpolated between previous and current grid positions
+    // Snake (interpolated)
     const prev = this._prevSnake || this.snake;
     this.snake.forEach((seg, i) => {
       const pseg = prev[i] || seg;
       const dx = seg.x - pseg.x;
       const dy = seg.y - pseg.y;
-      // Skip interpolation across a wall-wrap discontinuity (jump > half the grid)
       const lx = Math.abs(dx) <= this.GRID / 2 ? pseg.x + dx * progress : seg.x;
       const ly = Math.abs(dy) <= this.GRID / 2 ? pseg.y + dy * progress : seg.y;
       const alpha = i === 0 ? 0.9 : Math.max(0.2, 0.7 - i * 0.02);
@@ -290,6 +291,11 @@ class SnakeGame {
     });
     ctx.shadowBlur = 0;
 
+    // Legend (when power-ups or obstacles are active)
+    if (this._config.powerUps || this._config.obstacles) {
+      this._renderLegend(ctx, ox, oy, cell);
+    }
+
     // Idle hint
     if (this.state === 'idle') {
       ctx.fillStyle = 'rgba(255,255,255,0.18)';
@@ -298,6 +304,60 @@ class SnakeGame {
       ctx.textBaseline = 'middle';
       ctx.fillText('press any arrow key to start', canvas.width / 2, canvas.height / 2);
     }
+  }
+
+  _renderLegend(ctx, ox, oy, cell) {
+    const items = [];
+    if (this._config.powerUps) {
+      items.push({ color: '#3b82f6', label: 'Slow-mo',  shape: 'circle' });
+      items.push({ color: '#eab308', label: 'Shield',   shape: 'circle' });
+      items.push({ color: '#ef4444', label: '2× Score', shape: 'circle' });
+    }
+    if (this._config.obstacles) {
+      items.push({ color: 'rgba(239,68,68,0.6)', label: 'Obstacle', shape: 'square' });
+    }
+    if (items.length === 0) return;
+
+    const fs = Math.max(7, Math.floor(cell * 0.44));
+    const itemH = fs + 5;
+    const dotR = Math.max(3, Math.floor(cell * 0.22));
+    const pad = 6;
+    const labelW = 46;
+    const panelW = pad + dotR * 2 + 5 + labelW + pad;
+    const panelH = pad + items.length * itemH + pad;
+    const px = ox + this.GRID * cell - panelW - 3;
+    const py = oy + this.GRID * cell - panelH - 3;
+
+    // Frosted background
+    ctx.fillStyle = 'rgba(10,22,40,0.84)';
+    ctx.strokeStyle = 'rgba(99,179,237,0.14)';
+    ctx.lineWidth = 1;
+    this._roundRect(ctx, px, py, panelW, panelH, 5);
+    ctx.fill();
+    ctx.stroke();
+
+    items.forEach((item, i) => {
+      const cy = py + pad + i * itemH + itemH / 2;
+      const dotCx = px + pad + dotR;
+
+      ctx.fillStyle = item.color;
+      ctx.globalAlpha = 0.88;
+      if (item.shape === 'circle') {
+        ctx.beginPath();
+        ctx.arc(dotCx, cy, dotR, 0, Math.PI * 2);
+        ctx.fill();
+      } else {
+        this._roundRect(ctx, dotCx - dotR, cy - dotR, dotR * 2, dotR * 2, 1);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+
+      ctx.fillStyle = 'rgba(255,255,255,0.5)';
+      ctx.font = `${fs}px system-ui`;
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(item.label, dotCx + dotR + 5, cy);
+    });
   }
 
   _roundRect(ctx, x, y, w, h, r) {

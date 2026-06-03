@@ -286,6 +286,138 @@ html, body {
   color: var(--text);
 }
 
+/* ── Custom mode panel ───────────────────────────── */
+.custom-panel {
+  position: absolute;
+  inset: 0;
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0;
+  padding: 18px 22px 14px;
+}
+
+.custom-panel.visible { display: flex; }
+
+.custom-heading {
+  font-size: 9px;
+  letter-spacing: 4px;
+  color: var(--text-dim);
+  text-align: center;
+  margin-bottom: 14px;
+}
+
+.setting-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.setting-row:last-of-type { border-bottom: none; }
+
+.setting-label {
+  font-size: 8px;
+  letter-spacing: 2px;
+  font-weight: 600;
+  color: var(--text-dim);
+}
+
+/* Stepper (fruit count) */
+.stepper {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.stepper-btn {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  border: 1px solid var(--glass-border);
+  background: var(--glass);
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.12s, border-color 0.12s;
+}
+
+.stepper-btn:hover {
+  background: rgba(255,255,255,0.1);
+  border-color: var(--accent-dim);
+}
+
+.stepper-val {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--accent);
+  min-width: 18px;
+  text-align: center;
+}
+
+/* Speed pills */
+.speed-group {
+  display: flex;
+  gap: 2px;
+  background: rgba(0,0,0,0.25);
+  border-radius: 8px;
+  padding: 2px;
+}
+
+.speed-opt {
+  padding: 4px 9px;
+  border: none;
+  background: transparent;
+  color: var(--text-dim);
+  font-size: 8px;
+  letter-spacing: 1px;
+  font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+
+.speed-opt.active {
+  background: var(--accent-dim);
+  color: var(--accent);
+}
+
+/* Feature toggles */
+.feat-toggle {
+  padding: 4px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--glass-border);
+  background: var(--glass);
+  color: var(--text-dim);
+  font-size: 8px;
+  letter-spacing: 1.5px;
+  font-weight: 600;
+  cursor: pointer;
+  min-width: 38px;
+  text-align: center;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+}
+
+.feat-toggle.on {
+  background: var(--accent-dim);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* Custom play button */
+.custom-play-btn {
+  margin-top: 14px;
+  width: 100%;
+  padding: 10px;
+  font-size: 10px;
+  letter-spacing: 3px;
+}
+
 /* ── Fullscreen game-over overlay ────────────────── */
 .fullscreen-overlay-wrap {
   position: fixed;
