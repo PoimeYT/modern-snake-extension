@@ -148,7 +148,7 @@
     g.snake = [{ x: 0, y: 5 }];
     g.direction = { x: -1, y: 0 };
     g.nextDirection = { x: -1, y: 0 };
-    g.food = { x: 15, y: 15 };
+    g.foods = [{ x: 15, y: 15 }, { x: 16, y: 15 }, { x: 17, y: 15 }];
     g.activeEffects.shield = true;
     g._tick();
     assert(g.state !== 'dead', 'shield absorbs wall collision');
@@ -159,7 +159,7 @@
     g2.snake = [{ x: 5, y: 5 }, { x: 5, y: 6 }];
     g2.direction = { x: 0, y: 1 };
     g2.nextDirection = { x: 0, y: 1 };
-    g2.food = { x: 15, y: 15 };
+    g2.foods = [{ x: 15, y: 15 }, { x: 16, y: 15 }, { x: 17, y: 15 }];
     g2.activeEffects.shield = true;
     g2._tick();
     assert(g2.state !== 'dead', 'shield absorbs self collision');
@@ -173,7 +173,7 @@
     g.snake = [{ x: 5, y: 5 }];
     g.direction = { x: 1, y: 0 };
     g.nextDirection = { x: 1, y: 0 };
-    g.food = { x: 15, y: 15 };
+    g.foods = [{ x: 15, y: 15 }, { x: 16, y: 15 }, { x: 17, y: 15 }];
     g.powerUps = [{ x: 6, y: 5, type: 'shield', expiresAt: Date.now() + 5000 }];
     g._tick();
     assert(g.activeEffects.shield === true, 'shield power-up collected and applied');
@@ -184,7 +184,7 @@
     g2.snake = [{ x: 5, y: 5 }, { x: 4, y: 5 }];
     g2.direction = { x: 1, y: 0 };
     g2.nextDirection = { x: 1, y: 0 };
-    g2.food = { x: 6, y: 5 };
+    g2.foods = [{ x: 6, y: 5 }, { x: 15, y: 15 }, { x: 16, y: 15 }];
     g2.activeEffects.doublescore = Date.now() + 5000;
     g2._tick();
     assert(g2.score === 20, 'double-score effect doubles food points');
@@ -224,7 +224,7 @@
     g.snake = [{ x: 5, y: 5 }];
     g.direction = { x: 1, y: 0 };
     g.nextDirection = { x: 1, y: 0 };
-    g.food = { x: 15, y: 15 };
+    g.foods = [{ x: 15, y: 15 }, { x: 16, y: 15 }, { x: 17, y: 15 }];
     g.obstacles = [{ x: 6, y: 5 }];
     g._tick();
     assert(g.state === 'dead', 'obstacle collision causes death');
@@ -234,7 +234,7 @@
     g2.snake = [{ x: 5, y: 5 }];
     g2.direction = { x: 1, y: 0 };
     g2.nextDirection = { x: 1, y: 0 };
-    g2.food = { x: 15, y: 15 };
+    g2.foods = [{ x: 15, y: 15 }, { x: 16, y: 15 }, { x: 17, y: 15 }];
     g2.obstacles = [{ x: 6, y: 5 }];
     g2.activeEffects.shield = true;
     g2._tick();

@@ -6,6 +6,7 @@ class SnakeGame {
     this.GRID = 20;
     this._rafId = null;
     this._lastTick = 0;
+    this._prevSnake = null;
 
     this.onScoreUpdate = null; // fn(score)
     this.onDeath = null;       // fn(score)
@@ -14,14 +15,25 @@ class SnakeGame {
     this.reset();
   }
 
+  // Backward-compat accessors so tests and external code can still use game.food
+  get food() { return this.foods[0] || null; }
+  set food(v) { this.foods[0] = v; }
+
   reset() {
     this.snake = [{ x: 10, y: 10 }, { x: 9, y: 10 }, { x: 8, y: 10 }];
+    this._prevSnake = this.snake.map(s => ({ ...s }));
     this.direction = { x: 1, y: 0 };
     this.nextDirection = { x: 1, y: 0 };
     this.obstacles = [];
     this.powerUps = [];
     this.activeEffects = {}; // { slowmo: expiryMs, shield: true, doublescore: expiryMs }
-    this.food = this._randomFreeCell() || { x: 0, y: 0 }; // fallback unreachable in normal play
+    // Extreme gets 3 simultaneous pellets; other modes get 1
+    const foodCount = this.mode === 'extreme' ? 3 : 1;
+    this.foods = [];
+    for (let i = 0; i < foodCount; i++) {
+      const f = this._randomFreeCell();
+      if (f) this.foods.push(f);
+    }
     this.score = 0;
     this.level = 1;
     this.foodEaten = 0;
@@ -58,16 +70,22 @@ class SnakeGame {
     this.nextDirection = { x: dx, y: dy };
   }
 
-  _loop(ts) {
-    const effective = (this.activeEffects.slowmo && Date.now() < this.activeEffects.slowmo)
+  _effectiveInterval() {
+    return (this.activeEffects.slowmo && Date.now() < this.activeEffects.slowmo)
       ? this.tickInterval * 2
       : this.tickInterval;
-    if (ts - this._lastTick >= effective) {
+  }
+
+  _loop(ts) {
+    const interval = this._effectiveInterval();
+    if (ts - this._lastTick >= interval) {
+      this._prevSnake = this.snake.map(s => ({ ...s }));
       this._tick();
       this._lastTick = ts;
     }
     if (this.state === 'running') {
-      this.render();
+      const progress = Math.min(1, (ts - this._lastTick) / this._effectiveInterval());
+      this.render(progress);
       this._rafId = requestAnimationFrame(t => this._loop(t));
     }
   }
@@ -104,11 +122,13 @@ class SnakeGame {
 
     this.snake.unshift(head);
 
-    if (head.x === this.food.x && head.y === this.food.y) {
+    // Multi-food collision — find which pellet was eaten (if any)
+    const eatenIdx = this.foods.findIndex(f => f.x === head.x && f.y === head.y);
+    if (eatenIdx !== -1) {
       const pts = (this.activeEffects.doublescore && Date.now() < this.activeEffects.doublescore) ? 20 : 10;
       this.score += pts;
       this.foodEaten++;
-      this.food = this._randomFreeCell();
+      this.foods[eatenIdx] = this._randomFreeCell() || this.foods[eatenIdx];
       if (this.onScoreUpdate) this.onScoreUpdate(this.score);
       this._onFoodEaten();
     } else {
@@ -165,7 +185,7 @@ class SnakeGame {
       ...this.snake.map(s => `${s.x},${s.y}`),
       ...this.obstacles.map(o => `${o.x},${o.y}`),
       ...(this.powerUps || []).map(p => `${p.x},${p.y}`),
-      this.food ? `${this.food.x},${this.food.y}` : '',
+      ...(this.foods || []).map(f => `${f.x},${f.y}`),
     ]);
     const free = [];
     for (let x = 0; x < this.GRID; x++)
@@ -187,7 +207,8 @@ class SnakeGame {
       localStorage.setItem(SnakeGame.bestScoreKey(mode), String(score));
   }
 
-  render() {
+  // progress (0-1): how far between the last tick and the next — used for smooth interpolation
+  render(progress = 1) {
     const { ctx, canvas, GRID } = this;
     const cell = Math.floor(Math.min(canvas.width, canvas.height) / GRID);
     const ox = Math.floor((canvas.width - cell * GRID) / 2);
@@ -229,27 +250,37 @@ class SnakeGame {
       ctx.globalAlpha = 1;
     });
 
-    // Food (pulsing)
-    const fx = ox + this.food.x * cell + cell / 2;
-    const fy = oy + this.food.y * cell + cell / 2;
-    const pulse = 0.85 + 0.15 * Math.sin(Date.now() / 300);
-    ctx.beginPath();
-    ctx.arc(fx, fy, (cell / 2 - 2) * pulse, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(99,179,237,0.9)';
-    ctx.shadowColor = '#63b3ed';
-    ctx.shadowBlur = 10;
-    ctx.fill();
-    ctx.shadowBlur = 0;
+    // All food pellets (pulsing)
+    const now_ms = Date.now();
+    const pulse = 0.85 + 0.15 * Math.sin(now_ms / 300);
+    this.foods.forEach(f => {
+      const fx = ox + f.x * cell + cell / 2;
+      const fy = oy + f.y * cell + cell / 2;
+      ctx.beginPath();
+      ctx.arc(fx, fy, (cell / 2 - 2) * pulse, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(99,179,237,0.9)';
+      ctx.shadowColor = '#63b3ed';
+      ctx.shadowBlur = 10;
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    });
 
-    // Snake segments
+    // Snake segments — interpolated between previous and current grid positions
+    const prev = this._prevSnake || this.snake;
     this.snake.forEach((seg, i) => {
+      const pseg = prev[i] || seg;
+      const dx = seg.x - pseg.x;
+      const dy = seg.y - pseg.y;
+      // Skip interpolation across a wall-wrap discontinuity (jump > half the grid)
+      const lx = Math.abs(dx) <= this.GRID / 2 ? pseg.x + dx * progress : seg.x;
+      const ly = Math.abs(dy) <= this.GRID / 2 ? pseg.y + dy * progress : seg.y;
       const alpha = i === 0 ? 0.9 : Math.max(0.2, 0.7 - i * 0.02);
       ctx.fillStyle = `rgba(255,255,255,${alpha})`;
       ctx.strokeStyle = `rgba(99,179,237,${alpha * 0.5})`;
       ctx.lineWidth = 1;
       ctx.shadowColor = 'rgba(99,179,237,0.4)';
       ctx.shadowBlur = i === 0 ? 10 : 4;
-      this._roundRect(ctx, ox + seg.x * cell + 1, oy + seg.y * cell + 1, cell - 2, cell - 2, Math.ceil(cell * 0.25));
+      this._roundRect(ctx, ox + lx * cell + 1, oy + ly * cell + 1, cell - 2, cell - 2, Math.ceil(cell * 0.25));
       ctx.fill();
       ctx.stroke();
     });
