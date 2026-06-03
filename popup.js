@@ -10,6 +10,7 @@
 
   let game = null;
   let activeMode = 'classic';
+  let flashInterval = null;
 
   function syncCanvasSize() {
     canvas.width = wrap.clientWidth;
@@ -36,6 +37,7 @@
     hideOverlay();
     liveScore.textContent = 'SCORE: 0';
 
+    if (flashInterval) { clearInterval(flashInterval); flashInterval = null; }
     if (game) game.stop();
     game = new SnakeGame(canvas, mode);
 
@@ -48,12 +50,12 @@
       updateBestDisplay();
       const ctx = game.ctx;
       let alpha = 0.4;
-      const flash = setInterval(function () {
+      flashInterval = setInterval(function () {
         game.render();
         ctx.fillStyle = 'rgba(239,68,68,' + alpha + ')';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         alpha -= 0.05;
-        if (alpha <= 0) { clearInterval(flash); showOverlay(score); }
+        if (alpha <= 0) { clearInterval(flashInterval); flashInterval = null; showOverlay(score); }
       }, 40);
     };
 
@@ -88,6 +90,7 @@
   });
 
   document.getElementById('btn-again').addEventListener('click', function () {
+    if (flashInterval) { clearInterval(flashInterval); flashInterval = null; }
     hideOverlay();
     liveScore.textContent = 'SCORE: 0';
     if (game) { game.reset(); game.render(); }

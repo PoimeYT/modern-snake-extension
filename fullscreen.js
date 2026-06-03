@@ -12,6 +12,7 @@
   hudMode.textContent = mode.toUpperCase();
 
   let game = null;
+  let flashInterval = null;
 
   function syncCanvasSize() {
     const size = Math.min(window.innerWidth, window.innerHeight, 600);
@@ -33,6 +34,7 @@
     syncCanvasSize();
     hideOverlay();
 
+    if (flashInterval) { clearInterval(flashInterval); flashInterval = null; }
     if (game) game.stop();
     game = new SnakeGame(canvas, mode);
 
@@ -44,12 +46,12 @@
       SnakeGame.saveBestScore(mode, score);
       const ctx = game.ctx;
       let alpha = 0.4;
-      const flash = setInterval(function () {
+      flashInterval = setInterval(function () {
         game.render();
         ctx.fillStyle = 'rgba(239,68,68,' + alpha + ')';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         alpha -= 0.05;
-        if (alpha <= 0) { clearInterval(flash); showOverlay(score); }
+        if (alpha <= 0) { clearInterval(flashInterval); flashInterval = null; showOverlay(score); }
       }, 40);
     };
 
@@ -93,6 +95,7 @@
   });
 
   document.getElementById('btn-again').addEventListener('click', function () {
+    if (flashInterval) { clearInterval(flashInterval); flashInterval = null; }
     hudScore.textContent = '0';
     hideOverlay();
     if (game) { game.reset(); game.render(); }
