@@ -190,6 +190,57 @@
     assert(g2.score === 20, 'double-score effect doubles food points');
   })();
 
+  // ── Level progression (Classic+) ─────────────────────────────────────
+  suite('Level progression (Classic+)');
+  (() => {
+    const g = makeGame('classic+');
+    g.state = 'running';
+    for (let i = 0; i < 5; i++) {
+      g.snake = [{ x: 5, y: 5 }, { x: 4, y: 5 }];
+      g.direction = { x: 1, y: 0 };
+      g.nextDirection = { x: 1, y: 0 };
+      g.food = { x: 6, y: 5 };
+      g._tick();
+    }
+    assert(g.level === 2, 'level increases to 2 after 5 food');
+    assert(g.tickInterval === 140, 'tick interval decreases to 140ms at level 2');
+
+    // Eat 45 more (total 50 food → level 11)
+    for (let i = 0; i < 45; i++) {
+      g.snake = [{ x: 5, y: 5 }, { x: 4, y: 5 }];
+      g.direction = { x: 1, y: 0 };
+      g.nextDirection = { x: 1, y: 0 };
+      g.food = { x: 6, y: 5 };
+      g._tick();
+    }
+    assert(g.tickInterval >= 60, 'tick interval never goes below 60ms floor');
+  })();
+
+  // ── Obstacle collision (Extreme) ──────────────────────────────────────
+  suite('Obstacle collision (Extreme)');
+  (() => {
+    const g = makeGame('extreme');
+    g.state = 'running';
+    g.snake = [{ x: 5, y: 5 }];
+    g.direction = { x: 1, y: 0 };
+    g.nextDirection = { x: 1, y: 0 };
+    g.food = { x: 15, y: 15 };
+    g.obstacles = [{ x: 6, y: 5 }];
+    g._tick();
+    assert(g.state === 'dead', 'obstacle collision causes death');
+
+    const g2 = makeGame('extreme');
+    g2.state = 'running';
+    g2.snake = [{ x: 5, y: 5 }];
+    g2.direction = { x: 1, y: 0 };
+    g2.nextDirection = { x: 1, y: 0 };
+    g2.food = { x: 15, y: 15 };
+    g2.obstacles = [{ x: 6, y: 5 }];
+    g2.activeEffects.shield = true;
+    g2._tick();
+    assert(g2.state !== 'dead', 'shield absorbs obstacle collision');
+  })();
+
   const summary = document.getElementById('summary');
   summary.textContent = `${passed + failed} tests — ${passed} passed, ${failed} failed`;
   summary.style.color = failed === 0 ? '#4ade80' : '#f87171';

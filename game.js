@@ -126,7 +126,13 @@ class SnakeGame {
   }
 
   _onFoodEaten() {
-    // Classic: no progression. Overridden in Task 5.
+    if (this.mode === 'classic') return;
+    if (this.foodEaten % 5 !== 0) return;
+    this.level++;
+    this.tickInterval = Math.max(60, 150 - (this.level - 1) * 10);
+    if (this.mode === 'extreme' && this.level >= 3) this._spawnObstacle();
+    if (this.mode === 'extreme' && Math.random() < 0.4) this._spawnPowerUp();
+    if (this.onLevelUp) this.onLevelUp(this.level);
   }
 
   _die() {
