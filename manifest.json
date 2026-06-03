@@ -16,5 +16,11 @@
     "48": "icons/icon-48.png",
     "128": "icons/icon-128.png"
   },
-  "permissions": []
+  "permissions": [],
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "snake@modern-snake-extension",
+      "strict_min_version": "109.0"
+    }
+  }
 }
