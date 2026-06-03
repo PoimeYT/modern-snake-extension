@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Snake Icon Generator</title>
+  <style>
+    body { background: #0a1628; color: #ccc; font-family: system-ui; padding: 24px; }
+    h2 { color: #63b3ed; margin-bottom: 8px; }
+    p { margin-bottom: 20px; color: #888; }
+    .icon-row { display: flex; align-items: flex-end; gap: 24px; flex-wrap: wrap; }
+    .icon-item { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+    canvas { border-radius: 8px; image-rendering: pixelated; }
+    button { padding: 6px 14px; background: rgba(99,179,237,0.2); border: 1px solid rgba(99,179,237,0.5); color: #63b3ed; border-radius: 6px; cursor: pointer; font-size: 12px; }
+    button:hover { background: rgba(99,179,237,0.35); }
+  </style>
+</head>
+<body>
+<h2>Snake — Icon Generator</h2>
+<p>Click each download button, then save the file to the <code>icons/</code> folder with the exact filename shown.</p>
+<div class="icon-row" id="icons"></div>
+
+<script>
+  function drawIcon(size) {
+    const c = document.createElement('canvas');
+    c.width = size; c.height = size;
+    const ctx = c.getContext('2d');
+    const r = size * 0.18;
+
+    // Rounded background
+    const bg = ctx.createLinearGradient(0, 0, size, size);
+    bg.addColorStop(0, '#0f2040');
+    bg.addColorStop(1, '#0a1628');
+    ctx.fillStyle = bg;
+    ctx.beginPath();
+    ctx.roundRect(0, 0, size, size, r);
+    ctx.fill();
+
+    const cell = size / 5;
+    const pad = cell * 0.12;
+    const segR = Math.max(1, cell * 0.3);
+
+    function seg(gx, gy, alpha) {
+      ctx.fillStyle = `rgba(255,255,255,${alpha})`;
+      ctx.strokeStyle = `rgba(99,179,237,${alpha * 0.55})`;
+      ctx.lineWidth = Math.max(0.5, size * 0.012);
+      ctx.shadowColor = 'rgba(99,179,237,0.5)';
+      ctx.shadowBlur = size * 0.06;
+      ctx.beginPath();
+      ctx.roundRect(gx * cell + pad, gy * cell + pad, cell - pad * 2, cell - pad * 2, segR);
+      ctx.fill(); ctx.stroke();
+    }
+
+    // Snake: L-shape (head at top-right going left-then-down)
+    seg(3, 1, 0.92);
+    seg(2, 1, 0.70);
+    seg(1, 1, 0.50);
+    seg(1, 2, 0.35);
+    ctx.shadowBlur = 0;
+
+    // Food dot
+    const fx = 3.5 * cell, fy = 3.5 * cell, fr = cell * 0.32;
+    ctx.beginPath();
+    ctx.arc(fx, fy, fr, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(99,179,237,0.92)';
+    ctx.shadowColor = '#63b3ed';
+    ctx.shadowBlur = size * 0.07;
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    return c;
+  }
+
+  const container = document.getElementById('icons');
+  [16, 48, 128].forEach(size => {
+    const canvas = drawIcon(size);
+    canvas.style.width = Math.max(size, 80) + 'px';
+    canvas.style.height = Math.max(size, 80) + 'px';
+
+    const btn = document.createElement('button');
+    btn.textContent = 'Download icon-' + size + '.png';
+    btn.onclick = () => {
+      const a = document.createElement('a');
+      a.download = 'icon-' + size + '.png';
+      a.href = canvas.toDataURL('image/png');
+      a.click();
+    };
+
+    const item = document.createElement('div');
+    item.className = 'icon-item';
+    item.appendChild(canvas);
+    item.appendChild(btn);
+    container.appendChild(item);
+  });
+</script>
+</body>
+</html>
