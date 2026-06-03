@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Snake</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    body { margin: 0; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+  </style>
+</head>
+<body>
+
+  <div class="fullscreen-hud">
+    <div class="hud-mode" id="hud-mode">CLASSIC</div>
+    <div class="hud-score" id="hud-score">0</div>
+  </div>
+
+  <button class="close-btn" id="close-btn" title="Close">✕</button>
+
+  <canvas id="game-canvas"></canvas>
+
+  <div class="fullscreen-overlay-wrap">
+    <div class="overlay" id="overlay">
+      <div class="overlay-title">GAME OVER</div>
+      <div class="overlay-score" id="overlay-score">SCORE: 0</div>
+      <div class="overlay-best" id="overlay-best">BEST: 0</div>
+      <div class="overlay-buttons">
+        <button class="btn primary" id="btn-again">↩ PLAY AGAIN</button>
+        <button class="btn" id="btn-close-tab">✕ CLOSE</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="pause-overlay" id="pause-overlay">
+    <div class="pause-title">PAUSED</div>
+    <div class="pause-hint">PRESS ANY KEY TO RESUME</div>
+  </div>
+
+<script src="game.js"></script>
+<script src="fullscreen.js"></script>
+</body>
+</html>
