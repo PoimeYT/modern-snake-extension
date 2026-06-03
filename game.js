@@ -21,7 +21,7 @@ class SnakeGame {
     this.obstacles = [];
     this.powerUps = [];
     this.activeEffects = {}; // { slowmo: expiryMs, shield: true, doublescore: expiryMs }
-    this.food = this._randomFreeCell(); // must come after obstacles/powerUps are initialized
+    this.food = this._randomFreeCell() || { x: 0, y: 0 }; // fallback unreachable in normal play
     this.score = 0;
     this.level = 1;
     this.foodEaten = 0;
@@ -81,8 +81,13 @@ class SnakeGame {
 
     // Wall collision
     if (head.x < 0 || head.x >= this.GRID || head.y < 0 || head.y >= this.GRID) {
-      if (this.activeEffects.shield) { delete this.activeEffects.shield; return; }
-      return this._die();
+      if (this.activeEffects.shield) {
+        delete this.activeEffects.shield;
+        head.x = (head.x + this.GRID) % this.GRID;
+        head.y = (head.y + this.GRID) % this.GRID;
+      } else {
+        return this._die();
+      }
     }
 
     // Self collision
@@ -160,7 +165,7 @@ class SnakeGame {
     for (let x = 0; x < this.GRID; x++)
       for (let y = 0; y < this.GRID; y++)
         if (!occupied.has(`${x},${y}`)) free.push({ x, y });
-    return free[Math.floor(Math.random() * free.length)] || { x: 0, y: 0 };
+    return free.length ? free[Math.floor(Math.random() * free.length)] : null;
   }
 
   static bestScoreKey(mode) {
