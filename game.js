@@ -23,7 +23,7 @@ class SnakeGame {
     this.snake = [{ x: 10, y: 10 }, { x: 9, y: 10 }, { x: 8, y: 10 }];
     this._prevSnake = this.snake.map(s => ({ ...s }));
     this.direction = { x: 1, y: 0 };
-    this.nextDirection = { x: 1, y: 0 };
+    this._inputQueue = []; // FIFO of {x,y} — each tick consumes one entry
     this.obstacles = [];
     this.powerUps = [];
     this.activeEffects = {}; // { slowmo: expiryMs, shield: true, doublescore: expiryMs }
@@ -66,8 +66,12 @@ class SnakeGame {
   }
 
   queueDirection(dx, dy) {
-    if (dx === -this.direction.x && dy === -this.direction.y) return;
-    this.nextDirection = { x: dx, y: dy };
+    // Check reversal against the last queued direction (not the committed one),
+    // so cornering (e.g. right → up → left in rapid succession) works correctly.
+    const last = this._inputQueue[this._inputQueue.length - 1] || this.direction;
+    if (dx === -last.x && dy === -last.y) return; // block 180° reversal
+    if (dx === last.x && dy === last.y) return;    // skip duplicate
+    if (this._inputQueue.length < 3) this._inputQueue.push({ x: dx, y: dy });
   }
 
   _effectiveInterval() {
@@ -91,7 +95,7 @@ class SnakeGame {
   }
 
   _tick() {
-    this.direction = { ...this.nextDirection };
+    if (this._inputQueue.length > 0) this.direction = this._inputQueue.shift();
     const head = {
       x: this.snake[0].x + this.direction.x,
       y: this.snake[0].y + this.direction.y,
