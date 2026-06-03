@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Snake</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    body { width: 380px; height: 480px; overflow: hidden; }
+  </style>
+</head>
+<body>
+<div class="popup-shell">
+
+  <div class="popup-header">
+    <span class="wordmark">SNAKE</span>
+    <span class="best-score" id="best-score">BEST: 0</span>
+  </div>
+
+  <div class="tab-bar">
+    <div class="tab active" data-mode="classic">CLASSIC</div>
+    <div class="tab" data-mode="classic+">CLASSIC+</div>
+    <div class="tab" data-mode="extreme">EXTREME</div>
+  </div>
+
+  <div class="canvas-wrap">
+    <canvas id="game-canvas"></canvas>
+    <div class="overlay" id="overlay">
+      <div class="overlay-title">GAME OVER</div>
+      <div class="overlay-score" id="overlay-score">SCORE: 0</div>
+      <div class="overlay-best" id="overlay-best">BEST: 0</div>
+      <div class="overlay-buttons">
+        <button class="btn primary" id="btn-again">↩ PLAY AGAIN</button>
+        <button class="btn" id="btn-menu">⌂ MENU</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="popup-footer">
+    <span class="live-score" id="live-score">SCORE: 0</span>
+    <button class="expand-btn" id="expand-btn" title="Open fullscreen">⛶</button>
+  </div>
+
+</div>
+<script src="game.js"></script>
+<script src="popup.js"></script>
+</body>
+</html>
